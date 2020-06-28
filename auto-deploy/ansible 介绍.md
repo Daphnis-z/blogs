@@ -192,9 +192,46 @@ ansible all -m shell -a "df -h"
     - wst_es
 ```
 
+**hosts**：指定一组主机用于执行某组任务，主机列表在 hosts 文件里面定义，格式如下：
 
+```ini
+[web_servers]
+web01.wst.com
 
+[es_servers]
+es01.wst.com
+es02.wst.com
+```
 
+**roles**：指定要执行的任务组，每组里面有若干个子任务，定义格式如下：
+
+```shell
+# 删除原lib目录
+- name: clean old lib for xxx 
+  file: path=/home/xxx/lib state=absent
+  
+# 创建软连接
+- name: Link /home/xxx/lib1 to /home/xxx/lib
+  file:
+     src: "lib1"
+     dest: /home/xxx/lib
+     state: link
+  when: os_type == "centos7"
+```
+
+使用场景举例：在安装程序时可以根据操作系统（比如 centos6 或 centos7）选择对应的 lib 包。
+
+**tags**：给任务定义一个标签，用于单独执行某个标签下的任务，命令如下：
+
+```shell
+ansible-playbook -i env/product site.yml --tags "wst_es" -v
+```
+
+# 6. 总结
+
+Ansible 比较强大的是**剧本**功能，可以用于复杂系统的一键安装，特别是针对需要**多机多进程**部署的应用；另外，也可以对多台机器安装、升级程序或者执行某个命令（比如收集所有机器上某个程序的日志，分发安装包等）。
+
+这里比较简单的对 ansible 从安装配置到使用做了一些简要的介绍，后面有时间可以介绍一个使用 ansible 做系统部署的案例。
 
 
 
