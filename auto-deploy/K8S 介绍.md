@@ -29,7 +29,7 @@ Kubernetes 设计理念和功能其实就是一个类似 Linux 的分层架构�
 
 - **管理层**
 
-  系统度量（如基础设施、容器和网络的度量），自动化（如自动扩展、动态Provision等）以及策略管理（RBAC、Quota、PSP、NetworkPolicy 等）
+  系统度量（如基础设施、容器和网络的度量），自动化（如自动扩展、动态 Provision 等）以及策略管理（RBAC、Quota、PSP、NetworkPolicy 等）
 
 - **接口层**
 
@@ -40,7 +40,8 @@ Kubernetes 设计理念和功能其实就是一个类似 Linux 的分层架构�
   在接口层之上的庞大容器集群管理调度的生态系统，可以划分为两个范畴：
 
   1. Kubernetes 外部：日志、监控、配置管理、CI、CD、Workflow、FaaS、OTS 应用、ChatOps 等
-2. Kubernetes 内部：CRI、CNI、CVI、镜像仓库、Cloud Provider、集群自身的配置和管理等
+  
+  2. Kubernetes 内部：CRI、CNI、CVI、镜像仓库、Cloud Provider、集群自身的配置和管理等
 
 ## 1.3 名词解释
 
@@ -104,7 +105,7 @@ Kubernetes 设计理念和功能其实就是一个类似 Linux 的分层架构�
 
     名字空间为 K8s 集群提供虚拟的隔离作用，K8s 集群初始有两个名字空间，分别是默认名字空间 default 和系统名字空间 kube-system，除此以外，管理员可以可以创建新的名字空间满足需要。
 
-16. **RBAC访问授权**
+16. **RBAC 访问授权**
 
     Role-based Access Control（基于角色的访问控制），在RBAC中，访问策略可以跟某个角色关联，具体的用户在跟一个或多个角色相关联。
 
@@ -182,7 +183,7 @@ Kubernetes on Mesos（采用GCE）
 
 ### 2.2.1 准备
 
-1. 在机器上安装好 docke
+1. 在机器上安装好 docker
 
 2. 内核必须支持 memory and swap accounting，确认 linux 开启了如下配置：
 
@@ -210,13 +211,13 @@ Kubernetes on Mesos（采用GCE）
 
 ### 2.2.2 启动相应服务
 
-1. **运行Etcd**
+1. **运行 Etcd**
 
    ```shell
    docker run --net=host -d gcr.io/google_containers/etcd:2.0.12 /usr/local/bin/etcd --addr=127.0.0.1:4001 --bind-addr=0.0.0.0:4001 --data-dir=/var/etcd/data
    ```
 
-2. **启动master**
+2. **启动 master**
 
    ```shell
    docker run \
@@ -234,7 +235,7 @@ Kubernetes on Mesos（采用GCE）
        /hyperkube kubelet --containerized --hostname-override=&quot;127.0.0.1&quot; --address=&quot;0.0.0.0&quot; --api-servers=http://localhost:8080 --config=/etc/kubernetes/manifests
    ```
 
-3. **运行service proxy**
+3. **运行 service proxy**
 
    ```shell
    docker run -d --net=host --privileged gcr.io/google_containers/hyperkube:v1.0.1 /hyperkube proxy --master=http://127.0.0.1:8080 --v=2
@@ -289,11 +290,154 @@ curl <insert-cluster-ip-here>
 
 # 3. 使用
 
+这里以 spark 为例简单介绍下如何使用 k8s。
 
+下面介绍如何使用 Kubernetes 和 Docker 创建一个能够使用的 Apache Spark 集群。这里使用 Spark 的单例模式创建一个Spark master 节点服务和一系列 Spark workers 节点。
 
+## 3.1 启动 Master 服务
 
+Master 服务是一个 Spark 集群的主服务（或头服务）。
 
+使用 **[examples/spark/spark-master.json](http://kubernetes.io/v1.0/examples/spark/spark-master.json)** 文件创建运行在Master服务中的pod。
 
+```shell
+kubectl create -f examples/spark/spark-master.json
+```
+
+然后使用 **[examples/spark/spark-master-service.json](http://kubernetes.io/v1.0/examples/spark/spark-master-service.json)** 文件创建一个逻辑服务端点供Spark workers节点使用连接Matser pod。
+
+```shell
+kubectl create -f examples/spark/spark-master-service.json
+```
+
+**检查Master节点使用运行并且能够连接：**
+
+```shell
+kubectl get pods
+
+# 输出如下
+NAME                                           READY     STATUS    RESTARTS   AGE
+[...]
+spark-master                                   1/1       Running   0          25s
+```
+
+检查日志查看 master 节点的状态：
+
+```shell
+kubectl logs spark-master
+
+# 输出如下
+starting org.apache.spark.deploy.master.Master, logging to /opt/spark-1.4.0-bin-hadoop2.6/sbin/../logs/spark--org.apache.spark.deploy.master.Master-1-spark-master.out
+Spark Command: /usr/lib/jvm/java-7-openjdk-amd64/jre/bin/java -cp /opt/spark-1.4.0-bin-hadoop2.6/sbin/../conf/:/opt/spark-1.4.0-bin-hadoop2.6/lib/spark-assembly-1.4.0-hadoop2.6.0.jar:/opt/spark-1.4.0-bin-hadoop2.6/lib/datanucleus-api-jdo-3.2.6.jar:/opt/spark-1.4.0-bin-hadoop2.6/lib/datanucleus-rdbms-3.2.9.jar:/opt/spark-1.4.0-bin-hadoop2.6/lib/datanucleus-core-3.2.10.jar -Xms512m -Xmx512m -XX:MaxPermSize=128m org.apache.spark.deploy.master.Master --ip spark-master --port 7077 --webui-port 8080
+========================================
+15/06/26 14:01:49 INFO Master: Registered signal handlers for [TERM, HUP, INT]
+15/06/26 14:01:50 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+15/06/26 14:01:51 INFO SecurityManager: Changing view acls to: root
+15/06/26 14:01:51 INFO SecurityManager: Changing modify acls to: root
+15/06/26 14:01:51 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users with view permissions: Set(root); users with modify permissions: Set(root)
+15/06/26 14:01:51 INFO Slf4jLogger: Slf4jLogger started
+15/06/26 14:01:51 INFO Remoting: Starting remoting
+15/06/26 14:01:52 INFO Remoting: Remoting started; listening on addresses :[akka.tcp://sparkMaster@spark-master:7077]
+15/06/26 14:01:52 INFO Utils: Successfully started service 'sparkMaster' on port 7077.
+15/06/26 14:01:52 INFO Utils: Successfully started service on port 6066.
+15/06/26 14:01:52 INFO StandaloneRestServer: Started REST server for submitting applications on port 6066
+15/06/26 14:01:52 INFO Master: Starting Spark master at spark://spark-master:7077
+15/06/26 14:01:52 INFO Master: Running Spark version 1.4.0
+15/06/26 14:01:52 INFO Utils: Successfully started service 'MasterUI' on port 8080.
+15/06/26 14:01:52 INFO MasterWebUI: Started MasterWebUI at http://10.244.2.34:8080
+15/06/26 14:01:53 INFO Master: I have been elected leader! New state: ALIVE
+```
+
+## 3.2 启动 Spark workers
+
+在 Spark 集群中 Spark workers 做繁重的工作。它们为你的程序提供计算资源和数据缓存的能力。
+
+Spark workers 需要 Master 服务支持才能运行。
+
+使用 **[examples/spark/spark-worker-controller.json](http://kubernetes.io/v1.0/examples/spark/spark-worker-controller.json)** 文件创建[复制控制器](https://www.kubernetes.org.cn/replication-controller-kubernetes)管理workers pod。
+
+```shell
+kubectl create -f examples/spark/spark-worker-controller.json
+```
+
+**检查 workers 节点是否运行：**
+
+```shell
+kubectl get pods
+
+# 输出如下
+NAME                                            READY     STATUS    RESTARTS   AGE
+[...]
+spark-master                                    1/1       Running   0          14m
+spark-worker-controller-hifwi                   1/1       Running   0          33s
+spark-worker-controller-u40r2                   1/1       Running   0          33s
+spark-worker-controller-vpgyg                   1/1       Running   0          33s
+
+kubectl logs spark-master
+
+# 输出如下
+[...]
+15/06/26 14:15:43 INFO Master: Registering worker 10.244.2.35:46199 with 1 cores, 2.6 GB RAM
+15/06/26 14:15:55 INFO Master: Registering worker 10.244.1.15:44839 with 1 cores, 2.6 GB RAM
+15/06/26 14:15:55 INFO Master: Registering worker 10.244.0.19:60970 with 1 cores, 2.6 GB RAM
+```
+
+## 3.3 启动 Spark 客户端
+
+**获取 Master 服务的地址和端口：**
+
+```shell
+kubectl get service spark-master
+
+# 输出如下
+NAME           LABELS              SELECTOR            IP(S)          PORT(S)
+spark-master   name=spark-master   name=spark-master   10.0.204.187   7077/TCP
+```
+
+使用 SSH 连接集群中的一个节点，name 可以通过 kubectl get nodes 命令获得。
+
+```shell
+kubectl get nodes
+
+# 输出如下
+NAME                     LABELS                                          STATUS
+kubernetes-minion-5jvu   kubernetes.io/hostname=kubernetes-minion-5jvu   Ready
+kubernetes-minion-6fbi   kubernetes.io/hostname=kubernetes-minion-6fbi   Ready
+kubernetes-minion-8y2v   kubernetes.io/hostname=kubernetes-minion-8y2v   Ready
+kubernetes-minion-h0tr   kubernetes.io/hostname=kubernetes-minion-h0tr   Ready
+
+gcloud compute ssh kubernetes-minion-5jvu --zone=us-central1-b
+
+# 输出如下
+Linux kubernetes-minion-5jvu 3.16.0-0.bpo.4-amd64 #1 SMP Debian 3.16.7-ckt9-3~deb8u1~bpo70+1 (2015-04-27) x86_64
+
+=== GCE Kubernetes node setup complete ===
+```
+
+一旦登陆成功就可以使用 Spark 基础镜像了。在镜像中有一个脚本用来设置基于 Master 的 IP 和端口环境。
+
+```shell
+docker run -it gcr.io/google_containers/spark-base
+ . /setup_client.sh 10.0.204.187 7077
+pyspark
+
+# 输出如下
+Python 2.7.9 (default, Mar  1 2015, 12:57:24) 
+[GCC 4.9.2] on linux2
+Type "help", "copyright", "credits" or "license" for more information.
+15/06/26 14:25:28 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+Welcome to
+      ____              __
+     / __/__  ___ _____/ /__
+    _\ \/ _ \/ _ `/ __/  '_/
+   /__ / .__/\_,_/_/ /_/\_\   version 1.4.0
+      /_/
+Using Python version 2.7.9 (default, Mar  1 2015 12:57:24)
+SparkContext available as sc, HiveContext available as sqlContext.
+>>> import socket
+>>> sc.parallelize(range(1000)).map(lambda x:socket.gethostname()).distinct().collect()
+['spark-worker-controller-u40r2', 'spark-worker-controller-hifwi', 'spark-worker-controller-vpgyg']
+```
 
 
 
