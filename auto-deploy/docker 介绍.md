@@ -81,7 +81,7 @@ curl -sSL https://get.daocloud.io/docker | sh
    一般安装最新版本的 Docker Engine-Community 和 containerd 即可，命令如下：
 
    ```shell
-   yum install docker-ce docker-ce-cli containerd.io
+   yum install docker-ce -y
    ```
 
 ## 2.3 验证
@@ -91,7 +91,7 @@ Docker 安装完默认未启动。并且已经创建好 docker 用户组，但�
 先启动 docker：
 
 ```shell
-system start docker
+systemctl start docker
 ```
 
 运行 hello-world：
