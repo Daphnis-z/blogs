@@ -234,7 +234,9 @@ docker run -it ubuntu /bin/bash
    - **docker exec**：推荐使用 docker exec 命令，因为用这个命令退出容器终端，不会导致容器的停止
 
      ```shell
-     docker exec -it <container-id> /bin/bash
+     # 进入容器内部目录
+     docker exec -it <container-id|container-name> /bin/bash
+     # eg. docker exec -it redis101 /bin/bash
      ```
 
 4. **导入和导出容器**
