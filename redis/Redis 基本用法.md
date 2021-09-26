@@ -244,8 +244,23 @@ decr key
 
 
 
+TODO:
+
+- 客户端侧缓存
+- 分布式锁——RedLock
+
+​	
+
 
 
 # 参考
 
-1. [菜鸟 Redis教程](https://www.runoob.com/redis/redis-tutorial.html)
+1. [Redis Documentation](https://redis.io/documentation)
+2. [菜鸟 Redis教程](https://www.runoob.com/redis/redis-tutorial.html)
+
+
+
+
+
+
+
